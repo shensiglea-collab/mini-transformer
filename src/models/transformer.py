@@ -115,6 +115,18 @@ class TransformerRegressor(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+        Forward pass of the transformer model.
+
+            x (torch.Tensor): Input features of shape [batch_size, input_size]
+
+            torch.Tensor: Predictions of shape [batch_size, 1]
+        
+        Process:
+            1. Projects input from input_size to d_model dimensions
+            2. Adds positional encoding to preserve sequence position information
+            3. Applies dropout for regularization
+            4. Passes through stacked transformer layers
+            5. Projects output back to prediction dimension
         """
         前向传播
 

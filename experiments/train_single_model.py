@@ -78,7 +78,7 @@ def get_config(model_name):
 def main():
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='训练单个房价预测模型')
-    parser.add_argument('--model', type=str, default='mlp',
+    parser.add_argument('--model', type=str, default='transformer',
                         choices=['linear', 'linear_l2', 'linear_l1', 'linear_elastic', 'linear_improved',
                                 'mlp', 'deep_mlp', 'transformer',
                                 'decision_tree', 'svm', 'knn', 'random_forest'],

@@ -120,27 +120,27 @@ def main():
     # 为不同模型定义训练配置
     configs = {
         'linear': {
-            'epochs': 100,
+            'epochs': 200,
             'batch_size': 32,
             'lr': 0.01
         },
         'linear_l2': {
-            'epochs': 100,
+            'epochs': 200,
             'batch_size': 32,
             'lr': 0.01
         },
         'linear_l1': {
-            'epochs': 100,
+            'epochs': 200,
             'batch_size': 32,
             'lr': 0.01
         },
         'linear_elastic': {
-            'epochs': 100,
+            'epochs': 200,
             'batch_size': 32,
             'lr': 0.01
         },
         'linear_improved': {
-            'epochs': 100,
+            'epochs': 200,
             'batch_size': 32,
             'lr': 0.01
         },
