@@ -10,6 +10,12 @@ from .linear_regression_v2 import (
 )
 from .mlp import MLPModel, DeepMLPModel
 from .transformer import TransformerRegressor
+from .sklearn_models import (
+    DecisionTreeModel,
+    SVMModel,
+    KNNModel,
+    RandomForestModel
+)
 
 __all__ = [
     'LinearRegressionModel',
@@ -19,5 +25,9 @@ __all__ = [
     'ImprovedLinearRegression',
     'MLPModel',
     'DeepMLPModel',
-    'TransformerRegressor'
+    'TransformerRegressor',
+    'DecisionTreeModel',
+    'SVMModel',
+    'KNNModel',
+    'RandomForestModel'
 ]
