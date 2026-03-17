@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data import load_housing_data
 from src.models import (
     LinearRegressionModel, MLPModel, DeepMLPModel, TransformerRegressor,
-    DecisionTreeModel, SVMModel, KNNModel, RandomForestModel
+    DecisionTreeModel, SVMModel, KNNModel, RandomForestModel,
+    LinearRegressionL2, LinearRegressionL1, LinearRegressionElasticNet, ImprovedLinearRegression
 )
 from src.training import Trainer
 from src.training.metrics import MetricsCalculator, print_predictions
@@ -106,7 +107,7 @@ def main():
     print("\n" + "="*70)
     print("🏠 房价预测模型对比实验")
     print("   数据集: Boston Housing")
-    print("   模型: 线性回归 / MLP / 深层MLP / Transformer / 决策树 / SVM / KNN / 随机森林")
+    print("   模型: 线性回归系列 / MLP / 深层MLP / Transformer / 决策树 / SVM / KNN / 随机森林")
     print("="*70)
 
     # ==================== 加载数据 ====================
@@ -119,6 +120,26 @@ def main():
     # 为不同模型定义训练配置
     configs = {
         'linear': {
+            'epochs': 100,
+            'batch_size': 32,
+            'lr': 0.01
+        },
+        'linear_l2': {
+            'epochs': 100,
+            'batch_size': 32,
+            'lr': 0.01
+        },
+        'linear_l1': {
+            'epochs': 100,
+            'batch_size': 32,
+            'lr': 0.01
+        },
+        'linear_elastic': {
+            'epochs': 100,
+            'batch_size': 32,
+            'lr': 0.01
+        },
+        'linear_improved': {
             'epochs': 100,
             'batch_size': 32,
             'lr': 0.01
@@ -151,6 +172,22 @@ def main():
     # 1. 线性回归 (基准模型)
     model_linear = LinearRegressionModel(input_size=13, output_size=1)
     results['线性回归'] = run_experiment(model_linear, "线性回归 (基准)", dataset, configs['linear'])
+
+    # 1b. 线性回归 (L2正则化)
+    model_linear_l2 = LinearRegressionL2(input_size=13, output_size=1, weight_decay=0.01)
+    results['线性回归(L2)'] = run_experiment(model_linear_l2, "线性回归 (L2正则化)", dataset, configs['linear_l2'])
+
+    # 1c. 线性回归 (L1正则化)
+    model_linear_l1 = LinearRegressionL1(input_size=13, output_size=1, l1_lambda=0.01)
+    results['线性回归(L1)'] = run_experiment(model_linear_l1, "线性回归 (L1正则化)", dataset, configs['linear_l1'])
+
+    # 1d. 线性回归 (Elastic Net)
+    model_linear_elastic = LinearRegressionElasticNet(input_size=13, output_size=1, l1_lambda=0.01, l2_lambda=0.01)
+    results['线性回归(ElasticNet)'] = run_experiment(model_linear_elastic, "线性回归 (Elastic Net)", dataset, configs['linear_elastic'])
+
+    # 1e. 改进版线性回归
+    model_linear_improved = ImprovedLinearRegression(input_size=13, output_size=1, dropout=0.1, use_bn=True)
+    results['改进线性回归'] = run_experiment(model_linear_improved, "改进版线性回归", dataset, configs['linear_improved'])
 
     # 2. 简单MLP
     model_mlp = MLPModel(input_size=13, hidden_size=64, output_size=1)
