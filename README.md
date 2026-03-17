@@ -1,31 +1,33 @@
 # 房价预测项目
 
-使用三种不同模型预测房价：线性回归、MLP（多层感知机）、Transformer。
+使用多种不同模型预测房价：线性回归、MLP（多层感知机）、Transformer。
 
 ## 项目结构
 
 ```
-transformer/
-├── src/                          # 源代码目录 (新)
+mini-transformer/
+├── src/                          # 源代码目录
 │   ├── data/                     # 数据模块
 │   │   ├── __init__.py
-│   │   └── dataset.py            # 数据集类 (HousingDataset)
+│   │   ├── dataset.py            # 数据集类 (HousingDataset)
+│   │   └── advanced_dataset.py   # 高级数据集类
 │   ├── models/                   # 模型模块
 │   │   ├── __init__.py
 │   │   ├── linear_regression.py  # 线性回归模型
+│   │   ├── linear_regression_v2.py  # 线性回归模型v2
 │   │   ├── mlp.py                # MLP模型 (简单 + 深层)
 │   │   └── transformer.py        # Transformer回归模型
 │   └── training/                 # 训练模块
 │       ├── __init__.py
 │       ├── trainer.py            # 通用训练器 (Trainer)
+│       ├── advanced_trainer.py   # 高级训练器
 │       └── metrics.py            # 评估指标计算
-├── experiments/                  # 实验脚本 (新)
+├── experiments/                  # 实验脚本
 │   ├── train_all_models.py       # 训练并对比所有模型
-│   └── train_single_model.py     # 训练单个模型
+│   ├── train_single_model.py     # 训练单个模型
+│   └── compare_regression_models.py  # 回归模型对比
 ├── data/                         # 数据文件
 │   └── housing.data.txt          # Boston Housing数据集
-├── models/                       # [旧] 原始模型目录 (保留)
-├── scripts/                      # [旧] 原始脚本目录 (保留)
 └── README.md                     # 本文件
 ```
 
