@@ -55,27 +55,43 @@ class MetricsCalculator:
         print(f"     R²:   {metrics['r2']:.4f}")
 
     @staticmethod
-    def print_comparison(metrics_dict: Dict[str, Dict[str, float]]):
+    def print_comparison(metrics_dict: Dict[str, Dict[str, float]], param_counts: Dict[str, int] = None):
         """
         打印多个模型的对比结果
 
         Args:
             metrics_dict: {模型名: 指标字典} 的字典
+            param_counts: {模型名: 参数数量} 的字典，可选
         """
-        print("\n" + "="*70)
+        print("\n" + "="*80)
         print("模型对比结果")
-        print("="*70)
-        print(f"{'模型':<20} {'MSE':<10} {'RMSE':<10} {'MAE':<10} {'R²':<10}")
-        print("-"*70)
-
-        for model_name, metrics in metrics_dict.items():
-            print(f"{model_name:<20} "
-                  f"{metrics['mse']:<10.4f} "
-                  f"{metrics['rmse']:<10.4f} "
-                  f"${metrics['mae']:<9.2f}k "
-                  f"{metrics['r2']:<10.4f}")
-
-        print("="*70)
+        print("="*80)
+        
+        if param_counts:
+            print(f"{'模型':<20} {'MSE':<10} {'RMSE':<10} {'MAE':<10} {'R²':<10} {'参数量':<12}")
+            print("-"*80)
+            
+            for model_name, metrics in metrics_dict.items():
+                param_count = param_counts.get(model_name, 0)
+                param_str = f"{param_count:,}" if param_count > 0 else "N/A"
+                print(f"{model_name:<20} "
+                      f"{metrics['mse']:<10.4f} "
+                      f"{metrics['rmse']:<10.4f} "
+                      f"${metrics['mae']:<9.2f}k "
+                      f"{metrics['r2']:<10.4f} "
+                      f"{param_str:<12}")
+        else:
+            print(f"{'模型':<20} {'MSE':<10} {'RMSE':<10} {'MAE':<10} {'R²':<10}")
+            print("-"*70)
+            
+            for model_name, metrics in metrics_dict.items():
+                print(f"{model_name:<20} "
+                      f"{metrics['mse']:<10.4f} "
+                      f"{metrics['rmse']:<10.4f} "
+                      f"${metrics['mae']:<9.2f}k "
+                      f"{metrics['r2']:<10.4f}")
+        
+        print("="*80)
 
 
 def print_predictions(y_true: np.ndarray, y_pred: np.ndarray, num_samples: int = 5):

@@ -33,20 +33,19 @@ TRANSFORMER_PRESETS = {
         'train_config': {'epochs': 150, 'batch_size': 32, 'lr': 0.0005},
         'display_name': 'Transformer-Medium',
         'description': 'd_model=64, heads=4, layers=2'
+    },
+    'large': {
+        'model_args': {'preset': 'large'},
+        'train_config': {'epochs': 200, 'batch_size': 16, 'lr': 0.0001},
+        'display_name': 'Transformer-Large',
+        'description': 'd_model=128, heads=4, layers=3'
+    },
+    'xlarge': {
+        'model_args': {'preset': 'xlarge'},
+        'train_config': {'epochs': 300, 'batch_size': 16, 'lr': 0.00005},
+        'display_name': 'Transformer-XLarge',
+        'description': 'd_model=256, heads=8, layers=4'
     }
-  # ,
-  #   'large': {
-  #       'model_args': {'preset': 'large'},
-  #       'train_config': {'epochs': 200, 'batch_size': 16, 'lr': 0.0001},
-  #       'display_name': 'Transformer-Large',
-  #       'description': 'd_model=128, heads=4, layers=3'
-  #   },
-  #   'xlarge': {
-  #       'model_args': {'preset': 'xlarge'},
-  #       'train_config': {'epochs': 300, 'batch_size': 16, 'lr': 0.00005},
-  #       'display_name': 'Transformer-XLarge',
-  #       'description': 'd_model=256, heads=8, layers=4'
-  #   }
 }
 
 
@@ -132,12 +131,27 @@ def run_experiment(model, model_name, dataset, config):
     MetricsCalculator.print_metrics(train_metrics, "训练集")
     MetricsCalculator.print_metrics(test_metrics, "测试集")
 
+    # 计算参数数量
+    if model_info.get('model_type') == 'sklearn':
+        # sklearn模型的参数计数（近似值）
+        try:
+            # 尝试获取模型参数
+            if hasattr(model, 'coef_'):
+                param_count = len(model.coef_) + (1 if hasattr(model, 'intercept_') else 0)
+            else:
+                param_count = 0  # 无法确定参数数量
+        except:
+            param_count = 0
+    else:
+        # PyTorch模型的参数计数
+        param_count = sum(p.numel() for p in model.parameters())
+
     # 预测示例
     print_predictions(y_test, test_pred, num_samples=5)
 
     print(f"\n{'='*70}")
 
-    return test_metrics
+    return test_metrics, param_count
 
 
 def main():
@@ -168,6 +182,8 @@ Transformer 预设配置:
     
     args = parser.parse_args()
     
+    args.transformer = 'all'
+
     print("\n" + "="*70)
     print("🏠 房价预测模型对比实验")
     print("   数据集: Boston Housing")
@@ -194,30 +210,46 @@ Transformer 预设配置:
 
     # ==================== 运行实验 ====================
     results = {}
+    param_counts = {}
 
     # 1. 线性回归系列
     if not args.skip_linear:
         model_linear = LinearRegressionModel(input_size=13, output_size=1)
-        results['线性回归'] = run_experiment(model_linear, "线性回归 (基准)", dataset, configs['linear'])
+        test_metrics, param_count = run_experiment(model_linear, "线性回归 (基准)", dataset, configs['linear'])
+        results['线性回归'] = test_metrics
+        param_counts['线性回归'] = param_count
 
         model_linear_l2 = LinearRegressionL2(input_size=13, output_size=1, weight_decay=0.01)
-        results['线性回归(L2)'] = run_experiment(model_linear_l2, "线性回归 (L2正则化)", dataset, configs['linear'])
+        test_metrics, param_count = run_experiment(model_linear_l2, "线性回归 (L2正则化)", dataset, configs['linear'])
+        results['线性回归(L2)'] = test_metrics
+        param_counts['线性回归(L2)'] = param_count
 
         model_linear_l1 = LinearRegressionL1(input_size=13, output_size=1, l1_lambda=0.01)
-        results['线性回归(L1)'] = run_experiment(model_linear_l1, "线性回归 (L1正则化)", dataset, configs['linear'])
+        test_metrics, param_count = run_experiment(model_linear_l1, "线性回归 (L1正则化)", dataset, configs['linear'])
+        results['线性回归(L1)'] = test_metrics
+        param_counts['线性回归(L1)'] = param_count
 
         model_linear_elastic = LinearRegressionElasticNet(input_size=13, output_size=1, l1_lambda=0.01, l2_lambda=0.01)
-        results['线性回归(ElasticNet)'] = run_experiment(model_linear_elastic, "线性回归 (Elastic Net)", dataset, configs['linear'])
+        test_metrics, param_count = run_experiment(model_linear_elastic, "线性回归 (Elastic Net)", dataset, configs['linear'])
+        results['线性回归(ElasticNet)'] = test_metrics
+        param_counts['线性回归(ElasticNet)'] = param_count
 
         model_linear_improved = ImprovedLinearRegression(input_size=13, output_size=1, dropout=0.1, use_bn=True)
-        results['改进线性回归'] = run_experiment(model_linear_improved, "改进版线性回归", dataset, configs['linear'])
+        test_metrics, param_count = run_experiment(model_linear_improved, "改进版线性回归", dataset, configs['linear'])
+        results['改进线性回归'] = test_metrics
+        param_counts['改进线性回归'] = param_count
 
     # 2. MLP
     model_mlp = MLPModel(input_size=13, hidden_size=64, output_size=1)
-    results['MLP'] = run_experiment(model_mlp, "MLP (2层)", dataset, configs['mlp'])
+    test_metrics, param_count = run_experiment(model_mlp, "MLP (2层)", dataset, configs['mlp'])
+    results['MLP'] = test_metrics
+    param_counts['MLP'] = param_count
 
     model_deep_mlp = DeepMLPModel(input_size=13, hidden_sizes=[128, 64, 32], output_size=1)
-    results['深层MLP'] = run_experiment(model_deep_mlp, "深层MLP (3层)", dataset, configs['deep_mlp'])
+    test_metrics, param_count = run_experiment(model_deep_mlp, "深层MLP (3层)", dataset, configs['deep_mlp'])
+    results['深层MLP'] = test_metrics
+    param_counts['深层MLP'] = param_count
+
 
     # 3. Transformer
     if args.transformer == 'all':
@@ -225,50 +257,62 @@ Transformer 预设配置:
         for preset_name, preset_config in TRANSFORMER_PRESETS.items():
             model = TransformerRegressor.from_preset(preset_name, input_size=13)
             display_name = preset_config['display_name']
-            results[display_name] = run_experiment(
+            test_metrics, param_count = run_experiment(
                 model, 
                 f"{display_name} ({preset_config['description']})", 
                 dataset, 
                 preset_config['train_config']
             )
+            results[display_name] = test_metrics
+            param_counts[display_name] = param_count
     else:
         # 使用指定的 Transformer 配置
         preset_config = TRANSFORMER_PRESETS[args.transformer]
         model = TransformerRegressor.from_preset(args.transformer, input_size=13)
-        results['Transformer'] = run_experiment(
+        test_metrics, param_count = run_experiment(
             model, 
             f"Transformer ({preset_config['description']})", 
             dataset, 
             preset_config['train_config']
         )
+        results['Transformer'] = test_metrics
+        param_counts['Transformer'] = param_count
 
     # 4. sklearn 模型
     model_dt = DecisionTreeModel(max_depth=10)
-    results['决策树'] = run_experiment(model_dt, "决策树", dataset, configs['sklearn'])
+    test_metrics, param_count = run_experiment(model_dt, "决策树", dataset, configs['sklearn'])
+    results['决策树'] = test_metrics
+    param_counts['决策树'] = param_count
 
     model_svm = SVMModel(kernel='rbf', C=1.0)
-    results['SVM'] = run_experiment(model_svm, "支持向量机 (SVM)", dataset, configs['sklearn'])
+    test_metrics, param_count = run_experiment(model_svm, "支持向量机 (SVM)", dataset, configs['sklearn'])
+    results['SVM'] = test_metrics
+    param_counts['SVM'] = param_count
 
     model_knn = KNNModel(n_neighbors=5)
-    results['KNN'] = run_experiment(model_knn, "K近邻 (KNN)", dataset, configs['sklearn'])
+    test_metrics, param_count = run_experiment(model_knn, "K近邻 (KNN)", dataset, configs['sklearn'])
+    results['KNN'] = test_metrics
+    param_counts['KNN'] = param_count
 
     model_rf = RandomForestModel(n_estimators=100, max_depth=10)
-    results['随机森林'] = run_experiment(model_rf, "随机森林", dataset, configs['sklearn'])
+    test_metrics, param_count = run_experiment(model_rf, "随机森林", dataset, configs['sklearn'])
+    results['随机森林'] = test_metrics
+    param_counts['随机森林'] = param_count
 
     # ==================== 对比结果 ====================
-    print("\n" + "="*70)
+    print("\n" + "="*80)
     print("📊 最终对比结果")
-    print("="*70)
-    MetricsCalculator.print_comparison(results)
+    print("="*80)
+    MetricsCalculator.print_comparison(results, param_counts)
 
     # 找出最佳模型
     best_model = min(results.items(), key=lambda x: x[1]['mse'])
     print(f"\n🏆 最佳模型 (按MSE): {best_model[0]}")
     print(f"   MSE: {best_model[1]['mse']:.4f}, R²: {best_model[1]['r2']:.4f}")
 
-    print("\n" + "="*70)
+    print("\n" + "="*80)
     print("✅ 所有实验完成!")
-    print("="*70 + "\n")
+    print("="*80 + "\n")
 
 
 if __name__ == "__main__":
