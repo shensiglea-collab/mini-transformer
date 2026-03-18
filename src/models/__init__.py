@@ -9,7 +9,12 @@ from .linear_regression_v2 import (
     ImprovedLinearRegression
 )
 from .mlp import MLPModel, DeepMLPModel
-from .transformer import TransformerRegressor
+from .transformer import (
+    TransformerConfig,
+    TransformerRegressor,
+    create_transformer,
+    print_model_comparison
+)
 from .sklearn_models import (
     DecisionTreeModel,
     SVMModel,
@@ -25,7 +30,10 @@ __all__ = [
     'ImprovedLinearRegression',
     'MLPModel',
     'DeepMLPModel',
+    'TransformerConfig',
     'TransformerRegressor',
+    'create_transformer',
+    'print_model_comparison',
     'DecisionTreeModel',
     'SVMModel',
     'KNNModel',

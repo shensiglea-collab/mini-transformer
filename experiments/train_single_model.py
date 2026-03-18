@@ -1,10 +1,13 @@
 """
 单模型训练脚本 - 训练指定模型
-使用: python experiments/train_single_model.py --model mlp
+使用: 
+  python experiments/train_single_model.py --model mlp
+  python experiments/train_single_model.py --model transformer --preset large
+  python experiments/train_single_model.py --model transformer_large
 
 支持的模型:
 - 线性回归系列: linear, linear_l2, linear_l1, linear_elastic, linear_improved
-- 神经网络: mlp, deep_mlp, transformer
+- 神经网络: mlp, deep_mlp, transformer, transformer_small, transformer_medium, transformer_large, transformer_xlarge
 - 传统机器学习: decision_tree, svm, knn, random_forest
 """
 import sys
@@ -22,8 +25,21 @@ from src.training import Trainer
 from src.training.metrics import print_predictions
 
 
-def get_model(model_name, input_size=13):
+def get_model(model_name, input_size=13, preset=None):
     """根据名称获取模型实例"""
+    
+    # Transformer 预设配置
+    transformer_presets = {
+        'transformer_small': 'small',
+        'transformer_medium': 'medium',
+        'transformer_large': 'large',
+        'transformer_xlarge': 'xlarge',
+    }
+    
+    # 检查是否是 Transformer 预设
+    if model_name in transformer_presets:
+        return TransformerRegressor.from_preset(transformer_presets[model_name], input_size)
+    
     models = {
         # 线性回归系列
         'linear': LinearRegressionModel(input_size, 1),
@@ -35,7 +51,7 @@ def get_model(model_name, input_size=13):
         # 神经网络模型
         'mlp': MLPModel(input_size, hidden_size=64, output_size=1),
         'deep_mlp': DeepMLPModel(input_size, hidden_sizes=[128, 64, 32], output_size=1),
-        'transformer': TransformerRegressor(input_size, d_model=32, num_heads=2, d_ff=64, num_layers=1),
+        'transformer': TransformerRegressor.from_preset(preset or 'small', input_size),
         
         # 传统机器学习模型
         'decision_tree': DecisionTreeModel(max_depth=10),
@@ -45,7 +61,7 @@ def get_model(model_name, input_size=13):
     }
 
     if model_name not in models:
-        available = list(models.keys())
+        available = list(models.keys()) + list(transformer_presets.keys())
         raise ValueError(f"未知模型: {model_name}. 可用选项: {available}")
 
     return models[model_name]
@@ -66,6 +82,12 @@ def get_config(model_name):
         'deep_mlp': {'epochs': 150, 'batch_size': 32, 'lr': 0.0005},
         'transformer': {'epochs': 100, 'batch_size': 32, 'lr': 0.001},
         
+        # Transformer 预设配置
+        'transformer_small': {'epochs': 100, 'batch_size': 32, 'lr': 0.001},
+        'transformer_medium': {'epochs': 150, 'batch_size': 32, 'lr': 0.0005},
+        'transformer_large': {'epochs': 200, 'batch_size': 16, 'lr': 0.0001},
+        'transformer_xlarge': {'epochs': 300, 'batch_size': 16, 'lr': 0.00005},
+        
         # 传统机器学习模型 (不需要这些参数)
         'decision_tree': {'epochs': None, 'batch_size': None, 'lr': None},
         'svm': {'epochs': None, 'batch_size': None, 'lr': None},
@@ -75,14 +97,43 @@ def get_config(model_name):
     return configs.get(model_name, {'epochs': 100, 'batch_size': 32, 'lr': 0.001})
 
 
+# 预设配置到学习率的映射
+PRESET_CONFIGS = {
+    'small': {'epochs': 100, 'batch_size': 32, 'lr': 0.001},
+    'medium': {'epochs': 150, 'batch_size': 32, 'lr': 0.0005},
+    'large': {'epochs': 200, 'batch_size': 16, 'lr': 0.0001},
+    'xlarge': {'epochs': 300, 'batch_size': 16, 'lr': 0.00005},
+}
+
+
 def main():
     # 解析命令行参数
-    parser = argparse.ArgumentParser(description='训练单个房价预测模型')
+    parser = argparse.ArgumentParser(
+        description='训练单个房价预测模型',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例:
+  python experiments/train_single_model.py --model mlp
+  python experiments/train_single_model.py --model transformer --preset medium
+  python experiments/train_single_model.py --model transformer_large
+  python experiments/train_single_model.py --model transformer --preset xlarge --epochs 500
+
+Transformer 预设配置:
+  small:  d_model=32,  heads=2,  layers=1,  ~9K params
+  medium: d_model=64,  heads=4,  layers=2,  ~68K params
+  large:  d_model=128, heads=4,  layers=3,  ~400K params
+  xlarge: d_model=256, heads=8,  layers=4,  ~2.1M params
+        """
+    )
     parser.add_argument('--model', type=str, default='transformer',
                         choices=['linear', 'linear_l2', 'linear_l1', 'linear_elastic', 'linear_improved',
                                 'mlp', 'deep_mlp', 'transformer',
+                                'transformer_small', 'transformer_medium', 'transformer_large', 'transformer_xlarge',
                                 'decision_tree', 'svm', 'knn', 'random_forest'],
                         help='选择模型')
+    parser.add_argument('--preset', type=str, default=None,
+                        choices=['small', 'medium', 'large', 'xlarge'],
+                        help='Transformer预设配置 (仅对transformer模型有效)')
     parser.add_argument('--epochs', type=int, default=None,
                         help='训练轮数 (默认使用模型预设值)')
     parser.add_argument('--batch_size', type=int, default=None,
@@ -95,6 +146,8 @@ def main():
     print("\n" + "="*70)
     print(f"🏠 房价预测 - 单模型训练")
     print(f"   模型: {args.model}")
+    if args.preset:
+        print(f"   预设: {args.preset}")
     print("="*70)
 
     # 加载数据
@@ -104,8 +157,12 @@ def main():
     dataset.print_info()
 
     # 获取模型和配置
-    model = get_model(args.model)
+    model = get_model(args.model, preset=args.preset)
     config = get_config(args.model)
+    
+    # 如果指定了 preset，使用 preset 对应的配置
+    if args.preset and args.model == 'transformer':
+        config = PRESET_CONFIGS[args.preset].copy()
 
     # 覆盖配置（如果提供了命令行参数）
     if args.epochs:
@@ -123,6 +180,10 @@ def main():
         print(f"   模型: {model_info['model_name']}")
     else:
         print(f"   模型类型: {args.model}")
+        if hasattr(model, 'config'):
+            print(f"   d_model: {model.config.d_model}")
+            print(f"   num_heads: {model.config.num_heads}")
+            print(f"   num_layers: {model.config.num_layers}")
         print(f"   参数量: {sum(p.numel() for p in model.parameters()):,}")
 
     # 训练配置

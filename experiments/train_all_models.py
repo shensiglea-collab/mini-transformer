@@ -1,9 +1,13 @@
 """
 统一训练脚本 - 训练并对比所有模型
-运行: python experiments/train_all_models.py
+运行: 
+  python experiments/train_all_models.py
+  python experiments/train_all_models.py --transformer large
+  python experiments/train_all_models.py --transformer all
 """
 import sys
 import os
+import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data import load_housing_data
@@ -14,6 +18,36 @@ from src.models import (
 )
 from src.training import Trainer
 from src.training.metrics import MetricsCalculator, print_predictions
+
+
+# Transformer 预设配置
+TRANSFORMER_PRESETS = {
+    'small': {
+        'model_args': {'preset': 'small'},
+        'train_config': {'epochs': 100, 'batch_size': 32, 'lr': 0.001},
+        'display_name': 'Transformer-Small',
+        'description': 'd_model=32, heads=2, layers=1'
+    },
+    'medium': {
+        'model_args': {'preset': 'medium'},
+        'train_config': {'epochs': 150, 'batch_size': 32, 'lr': 0.0005},
+        'display_name': 'Transformer-Medium',
+        'description': 'd_model=64, heads=4, layers=2'
+    }
+  # ,
+  #   'large': {
+  #       'model_args': {'preset': 'large'},
+  #       'train_config': {'epochs': 200, 'batch_size': 16, 'lr': 0.0001},
+  #       'display_name': 'Transformer-Large',
+  #       'description': 'd_model=128, heads=4, layers=3'
+  #   },
+  #   'xlarge': {
+  #       'model_args': {'preset': 'xlarge'},
+  #       'train_config': {'epochs': 300, 'batch_size': 16, 'lr': 0.00005},
+  #       'display_name': 'Transformer-XLarge',
+  #       'description': 'd_model=256, heads=8, layers=4'
+  #   }
+}
 
 
 def run_experiment(model, model_name, dataset, config):
@@ -41,6 +75,10 @@ def run_experiment(model, model_name, dataset, config):
         print(f"   模型: {model_info['model_name']}")
     else:
         print(f"\n📊 模型信息:")
+        if hasattr(model, 'config'):
+            print(f"   d_model: {model.config.d_model}")
+            print(f"   num_heads: {model.config.num_heads}")
+            print(f"   num_layers: {model.config.num_layers}")
         print(f"   参数量: {sum(p.numel() for p in model.parameters()):,}")
 
     # 获取numpy数据
@@ -104,10 +142,40 @@ def run_experiment(model, model_name, dataset, config):
 
 def main():
     """主函数 - 运行所有模型的对比实验"""
+    
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(
+        description='训练并对比所有房价预测模型',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例:
+  python experiments/train_all_models.py                     # 使用 small transformer
+  python experiments/train_all_models.py --transformer large # 使用 large transformer
+  python experiments/train_all_models.py --transformer all   # 对比所有 transformer 配置
+
+Transformer 预设配置:
+  small:  d_model=32,  heads=2,  layers=1,  ~9K params
+  medium: d_model=64,  heads=4,  layers=2,  ~68K params
+  large:  d_model=128, heads=4,  layers=3,  ~400K params
+  xlarge: d_model=256, heads=8,  layers=4,  ~2.1M params
+        """
+    )
+    parser.add_argument('--transformer', type=str, default='small',
+                        choices=['small', 'medium', 'large', 'xlarge', 'all'],
+                        help='Transformer 配置预设 (默认: small, all=对比所有配置)')
+    parser.add_argument('--skip-linear', action='store_true',
+                        help='跳过线性回归系列模型，加快实验速度')
+    
+    args = parser.parse_args()
+    
     print("\n" + "="*70)
     print("🏠 房价预测模型对比实验")
     print("   数据集: Boston Housing")
-    print("   模型: 线性回归系列 / MLP / 深层MLP / Transformer / 决策树 / SVM / KNN / 随机森林")
+    if args.transformer == 'all':
+        print("   Transformer: 对比所有配置 (small/medium/large/xlarge)")
+    else:
+        preset_info = TRANSFORMER_PRESETS[args.transformer]
+        print(f"   Transformer: {args.transformer} ({preset_info['description']})")
     print("="*70)
 
     # ==================== 加载数据 ====================
@@ -117,105 +185,73 @@ def main():
     dataset.print_info()
 
     # ==================== 模型配置 ====================
-    # 为不同模型定义训练配置
     configs = {
-        'linear': {
-            'epochs': 200,
-            'batch_size': 32,
-            'lr': 0.01
-        },
-        'linear_l2': {
-            'epochs': 200,
-            'batch_size': 32,
-            'lr': 0.01
-        },
-        'linear_l1': {
-            'epochs': 200,
-            'batch_size': 32,
-            'lr': 0.01
-        },
-        'linear_elastic': {
-            'epochs': 200,
-            'batch_size': 32,
-            'lr': 0.01
-        },
-        'linear_improved': {
-            'epochs': 200,
-            'batch_size': 32,
-            'lr': 0.01
-        },
-        'mlp': {
-            'epochs': 100,
-            'batch_size': 32,
-            'lr': 0.001
-        },
-        'deep_mlp': {
-            'epochs': 150,
-            'batch_size': 32,
-            'lr': 0.0005
-        },
-        'transformer': {
-            'epochs': 100,
-            'batch_size': 32,
-            'lr': 0.001
-        },
-        'sklearn': {  # sklearn模型不需要这些参数，但保留结构
-            'epochs': None,
-            'batch_size': None,
-            'lr': None
-        }
+        'linear': {'epochs': 200, 'batch_size': 32, 'lr': 0.01},
+        'mlp': {'epochs': 100, 'batch_size': 32, 'lr': 0.001},
+        'deep_mlp': {'epochs': 150, 'batch_size': 32, 'lr': 0.0005},
+        'sklearn': {'epochs': None, 'batch_size': None, 'lr': None}
     }
 
     # ==================== 运行实验 ====================
     results = {}
 
-    # 1. 线性回归 (基准模型)
-    model_linear = LinearRegressionModel(input_size=13, output_size=1)
-    results['线性回归'] = run_experiment(model_linear, "线性回归 (基准)", dataset, configs['linear'])
+    # 1. 线性回归系列
+    if not args.skip_linear:
+        model_linear = LinearRegressionModel(input_size=13, output_size=1)
+        results['线性回归'] = run_experiment(model_linear, "线性回归 (基准)", dataset, configs['linear'])
 
-    # 1b. 线性回归 (L2正则化)
-    model_linear_l2 = LinearRegressionL2(input_size=13, output_size=1, weight_decay=0.01)
-    results['线性回归(L2)'] = run_experiment(model_linear_l2, "线性回归 (L2正则化)", dataset, configs['linear_l2'])
+        model_linear_l2 = LinearRegressionL2(input_size=13, output_size=1, weight_decay=0.01)
+        results['线性回归(L2)'] = run_experiment(model_linear_l2, "线性回归 (L2正则化)", dataset, configs['linear'])
 
-    # 1c. 线性回归 (L1正则化)
-    model_linear_l1 = LinearRegressionL1(input_size=13, output_size=1, l1_lambda=0.01)
-    results['线性回归(L1)'] = run_experiment(model_linear_l1, "线性回归 (L1正则化)", dataset, configs['linear_l1'])
+        model_linear_l1 = LinearRegressionL1(input_size=13, output_size=1, l1_lambda=0.01)
+        results['线性回归(L1)'] = run_experiment(model_linear_l1, "线性回归 (L1正则化)", dataset, configs['linear'])
 
-    # 1d. 线性回归 (Elastic Net)
-    model_linear_elastic = LinearRegressionElasticNet(input_size=13, output_size=1, l1_lambda=0.01, l2_lambda=0.01)
-    results['线性回归(ElasticNet)'] = run_experiment(model_linear_elastic, "线性回归 (Elastic Net)", dataset, configs['linear_elastic'])
+        model_linear_elastic = LinearRegressionElasticNet(input_size=13, output_size=1, l1_lambda=0.01, l2_lambda=0.01)
+        results['线性回归(ElasticNet)'] = run_experiment(model_linear_elastic, "线性回归 (Elastic Net)", dataset, configs['linear'])
 
-    # 1e. 改进版线性回归
-    model_linear_improved = ImprovedLinearRegression(input_size=13, output_size=1, dropout=0.1, use_bn=True)
-    results['改进线性回归'] = run_experiment(model_linear_improved, "改进版线性回归", dataset, configs['linear_improved'])
+        model_linear_improved = ImprovedLinearRegression(input_size=13, output_size=1, dropout=0.1, use_bn=True)
+        results['改进线性回归'] = run_experiment(model_linear_improved, "改进版线性回归", dataset, configs['linear'])
 
-    # 2. 简单MLP
+    # 2. MLP
     model_mlp = MLPModel(input_size=13, hidden_size=64, output_size=1)
     results['MLP'] = run_experiment(model_mlp, "MLP (2层)", dataset, configs['mlp'])
 
-    # 3. 深层MLP
     model_deep_mlp = DeepMLPModel(input_size=13, hidden_sizes=[128, 64, 32], output_size=1)
     results['深层MLP'] = run_experiment(model_deep_mlp, "深层MLP (3层)", dataset, configs['deep_mlp'])
 
-    # 4. Transformer
-    model_transformer = TransformerRegressor(
-        input_size=13, d_model=32, num_heads=2, d_ff=64, num_layers=1
-    )
-    results['Transformer'] = run_experiment(model_transformer, "Transformer", dataset, configs['transformer'])
+    # 3. Transformer
+    if args.transformer == 'all':
+        # 对比所有 Transformer 配置
+        for preset_name, preset_config in TRANSFORMER_PRESETS.items():
+            model = TransformerRegressor.from_preset(preset_name, input_size=13)
+            display_name = preset_config['display_name']
+            results[display_name] = run_experiment(
+                model, 
+                f"{display_name} ({preset_config['description']})", 
+                dataset, 
+                preset_config['train_config']
+            )
+    else:
+        # 使用指定的 Transformer 配置
+        preset_config = TRANSFORMER_PRESETS[args.transformer]
+        model = TransformerRegressor.from_preset(args.transformer, input_size=13)
+        results['Transformer'] = run_experiment(
+            model, 
+            f"Transformer ({preset_config['description']})", 
+            dataset, 
+            preset_config['train_config']
+        )
 
-    # 5. 决策树
+    # 4. sklearn 模型
     model_dt = DecisionTreeModel(max_depth=10)
     results['决策树'] = run_experiment(model_dt, "决策树", dataset, configs['sklearn'])
 
-    # 6. 支持向量机
     model_svm = SVMModel(kernel='rbf', C=1.0)
     results['SVM'] = run_experiment(model_svm, "支持向量机 (SVM)", dataset, configs['sklearn'])
 
-    # 7. K近邻
     model_knn = KNNModel(n_neighbors=5)
     results['KNN'] = run_experiment(model_knn, "K近邻 (KNN)", dataset, configs['sklearn'])
 
-    # 8. 随机森林
     model_rf = RandomForestModel(n_estimators=100, max_depth=10)
     results['随机森林'] = run_experiment(model_rf, "随机森林", dataset, configs['sklearn'])
 
