@@ -4,7 +4,9 @@
 """
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+_EXPERIMENTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _EXPERIMENTS_DIR)
 
 from src.data import load_housing_data
 from src.data.advanced_dataset import load_advanced_housing_data
@@ -91,7 +93,7 @@ def main():
     print("实验组1: 原始数据 + 原始线性回归 (基准)")
     print("="*70)
 
-    data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'housing.data.txt')
+    data_path = os.path.join(_EXPERIMENTS_DIR, 'data', 'housing.data.txt')
     dataset_original = load_housing_data(data_path)
     dataset_original.print_info()
 

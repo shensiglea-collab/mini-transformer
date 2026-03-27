@@ -8,7 +8,10 @@
 import sys
 import os
 import argparse
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 源码与数据均在 experiments/ 下，与仓库根目录的 reservoir-property-llm 相互独立
+_EXPERIMENTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _EXPERIMENTS_DIR)
 
 from src.data import load_housing_data
 from src.models import (
@@ -196,7 +199,7 @@ Transformer 预设配置:
 
     # ==================== 加载数据 ====================
     print("\n📦 加载数据...")
-    data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'housing.data.txt')
+    data_path = os.path.join(_EXPERIMENTS_DIR, 'data', 'housing.data.txt')
     dataset = load_housing_data(data_path)
     dataset.print_info()
 

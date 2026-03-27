@@ -1,34 +1,32 @@
-# 房价预测项目
+# 本仓库说明
+
+本仓库包含**两个相互独立的子项目**（无共享 Python 包路径依赖）：
+
+| 目录 | 内容 |
+|------|------|
+| **`experiments/`** | Boston 房价预测：多种模型对比（线性/MLP/Transformer/sklearn 等），源码在 `experiments/src/`，数据在 `experiments/data/`。详见 [experiments/README.md](experiments/README.md)。 |
+| **`reservoir-property-llm/`** | 储层物性：结构化 CSV + 小 Transformer 表格回归（课题向），详见 [reservoir-property-llm/README.md](reservoir-property-llm/README.md)。 |
+
+---
+
+# 子项目一：`experiments/`（房价预测）
 
 使用多种不同模型预测房价：线性回归、MLP（多层感知机）、Transformer、决策树、支持向量机、K近邻、随机森林。
 
 ## 项目结构
 
 ```
-mini-transformer/
-├── src/                          # 源代码目录
-│   ├── data/                     # 数据模块
-│   │   ├── __init__.py
-│   │   ├── dataset.py            # 数据集类 (HousingDataset)
-│   │   └── advanced_dataset.py   # 高级数据集类
-│   ├── models/                   # 模型模块
-│   │   ├── __init__.py
-│   │   ├── linear_regression.py  # 线性回归模型
-│   │   ├── linear_regression_v2.py  # 线性回归模型v2
-│   │   ├── mlp.py                # MLP模型 (简单 + 深层)
-│   │   └── transformer.py        # Transformer回归模型
-│   └── training/                 # 训练模块
-│       ├── __init__.py
-│       ├── trainer.py            # 通用训练器 (Trainer)
-│       ├── advanced_trainer.py   # 高级训练器
-│       └── metrics.py            # 评估指标计算
-├── experiments/                  # 实验脚本
-│   ├── train_all_models.py       # 训练并对比所有模型
-│   ├── train_single_model.py     # 训练单个模型
-│   └── compare_regression_models.py  # 回归模型对比
-├── data/                         # 数据文件
-│   └── housing.data.txt          # Boston Housing数据集
-└── README.md                     # 本文件
+experiments/
+├── src/                          # 源代码（仅此子项目使用）
+│   ├── data/
+│   ├── models/
+│   └── training/
+├── data/
+│   └── housing.data.txt          # Boston Housing
+├── train_all_models.py
+├── train_single_model.py
+├── compare_regression_models.py
+└── README.md
 ```
 
 ## 快速开始
@@ -131,8 +129,8 @@ from src.data import load_housing_data
 from src.models import MLPModel
 from src.training import Trainer
 
-# 加载数据
-dataset = load_housing_data('data/housing.data.txt')
+# 加载数据（若在 experiments/ 下作为 cwd，用相对路径；否则写绝对路径）
+dataset = load_housing_data('experiments/data/housing.data.txt')
 
 # 创建模型
 model = MLPModel(input_size=13, hidden_size=64, output_size=1)
